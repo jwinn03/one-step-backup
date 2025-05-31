@@ -1,0 +1,28 @@
+<UI version="4.0" >
+ <class>one_step_backupClass</class>
+ <widget class="QMainWindow" name="one_step_backupClass" >
+  <property name="objectName" >
+   <string notr="true">one_step_backupClass</string>
+  </property>
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>600</width>
+    <height>400</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>one_step_backup</string>
+  </property>  <widget class="QMenuBar" name="menuBar" />
+  <widget class="QToolBar" name="mainToolBar" />
+  <widget class="QWidget" name="centralWidget" />
+  <widget class="QStatusBar" name="statusBar" />
+ </widget>
+ <layoutDefault spacing="6" margin="11" />
+ <pixmapfunction></pixmapfunction>
+ <resources>
+   <include location="one_step_backup.qrc"/>
+ </resources>
+ <connections/>
+</UI>
