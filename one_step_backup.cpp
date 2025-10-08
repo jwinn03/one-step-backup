@@ -65,6 +65,16 @@ void one_step_backup::browseSourceDirectory()
         QString(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (!dir.isEmpty()) {
         sourceDirEdit->setText(dir);
+
+        fileListWidget->clear();
+        QStringList mediaFiles = findMediaFiles(dir);
+
+        if (mediaFiles.isEmpty()) {
+            fileListWidget->addItem("No media files found in the selected directory.");
+        } else {
+            fileListWidget->addItem(QString("Found %1 media files:").arg(mediaFiles.size()));
+            fileListWidget->addItems(mediaFiles);
+        }
     }
 }
 
