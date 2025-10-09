@@ -1,16 +1,33 @@
+// one_step_backup.cpp
+// Licensed under Apache 2.0
+
 #include "one_step_backup.h"
-#include <QFileInfo>
+
+#include <QApplication>
 #include <QDirIterator>
 #include <QFile>
-#include <QDebug>
+#include <QFileInfo>
+#include <QStandardPaths>
 
-one_step_backup::one_step_backup(QWidget *parent)
+// Define a default "home" directory based on OS and Qt's implementation of standard paths
+#ifdef Q_OS_WIN
+#define DEFAULT_DIRECTORY QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
+#elif defined Q_OS_MAC
+#define DEFAULT_DIRECTORY QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
+#elif defined Q_OS_LINUX
+#define DEFAULT_DIRECTORY QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
+#else
+#define DEFAULT_DIRECTORY QDir::homePath()
+#endif
+
+one_step_backup::one_step_backup(QWidget* parent)
     : QMainWindow(parent)
 {
     ui.setupUi(this);
     setWindowTitle("Media File Backup Tool");
+    
+    initializeFileTypeCategories();
 
-    // Create central widget and layout
     QWidget* centralWidget = new QWidget(this);
     QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
     setCentralWidget(centralWidget);
@@ -35,6 +52,10 @@ one_step_backup::one_step_backup(QWidget *parent)
     destLayout->addWidget(browseDestBtn);
     mainLayout->addLayout(destLayout);
 
+    // File type selection
+    selectFileTypesBtn = new QPushButton("Select file types", this);
+    mainLayout->addWidget(selectFileTypesBtn);
+
     // Progress bar
     progressBar = new QProgressBar(this);
     progressBar->setRange(0, 100);
@@ -52,69 +73,113 @@ one_step_backup::one_step_backup(QWidget *parent)
     // Connect signals and slots
     connect(browseSourceBtn, &QPushButton::clicked, this, &one_step_backup::browseSourceDirectory);
     connect(browseDestBtn, &QPushButton::clicked, this, &one_step_backup::browseDestinationDirectory);
+    connect(selectFileTypesBtn, &QPushButton::clicked, this, &one_step_backup::openFileTypeSelection);
     connect(startBackupBtn, &QPushButton::clicked, this, &one_step_backup::startBackup);
+
+    QSet<QString> defaultSelection;
+
+    /* //Select a single category by default
+    if (fileTypeCategories.contains("Photos")) {
+        for (const QString& ext : fileTypeCategories.value("Photos")) {
+            defaultSelection.insert(ext);
+        }
+    }
+    */
+
+    // Select all extensions by default
+    if (defaultSelection.isEmpty()) {
+        for (auto it = fileTypeCategories.cbegin(); it != fileTypeCategories.cend(); ++it) {
+            for (const QString& ext : it.value()) {
+                defaultSelection.insert(ext);
+            }
+        }
+    }
+
+    applySelectedExtensions(defaultSelection);
+    refreshFileList();
 }
 
-one_step_backup::~one_step_backup()
-{
-}
+one_step_backup::~one_step_backup() = default;
 
+// Opens OS native dialog to select source directory
 void one_step_backup::browseSourceDirectory()
 {
-    QString dir = QFileDialog::getExistingDirectory(this, "Select Source Directory",
-        QString(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    QString dir = QFileDialog::getExistingDirectory(
+        this,
+        "Select Source Directory",
+        DEFAULT_DIRECTORY,
+        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
     if (!dir.isEmpty()) {
         sourceDirEdit->setText(dir);
-
-        fileListWidget->clear();
-        QStringList mediaFiles = findMediaFiles(dir);
-
-        if (mediaFiles.isEmpty()) {
-            fileListWidget->addItem("No media files found in the selected directory.");
-        } else {
-            fileListWidget->addItem(QString("Found %1 media files:").arg(mediaFiles.size()));
-            fileListWidget->addItems(mediaFiles);
-        }
+        refreshFileList();
     }
 }
 
+// Opens OS native dialog for directory selection
 void one_step_backup::browseDestinationDirectory()
 {
-    QString dir = QFileDialog::getExistingDirectory(this, "Select Destination Directory",
-        QString(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    QString dir = QFileDialog::getExistingDirectory(
+        this,
+        "Select Destination Directory",
+        DEFAULT_DIRECTORY,
+        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
     if (!dir.isEmpty()) {
         destDirEdit->setText(dir);
     }
 }
 
-bool one_step_backup::isMediaFile(const QString& filePath)
+// Opens the file type selection dialog
+void one_step_backup::openFileTypeSelection()
 {
-    QStringList mediaExtensions = {
-        // Image formats
-        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp",
-        // Video formats
-        ".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".webm"
-    };
-
-    QString extension = QFileInfo(filePath).suffix().toLower();
-    return mediaExtensions.contains("." + extension);
+    FileTypeSelectionDialog dialog(fileTypeCategories, selectedExtensions, this);
+    if (dialog.exec() == QDialog::Accepted) {
+        applySelectedExtensions(dialog.selectedExtensions());
+        refreshFileList();
+    }
 }
 
+// Returns true if filePath matches one of the selected extensions
+bool one_step_backup::isMediaFile(const QString& filePath) const
+{
+    if (selectedExtensions.isEmpty()) {
+        return false;
+    }
+
+    const QString suffix = QFileInfo(filePath).suffix().toLower();
+    if (suffix.isEmpty()) {
+        return false;
+    }
+
+    return selectedExtensions.contains("." + suffix);
+}
+
+// Recursively finds all media files in the given directory matching the selected extensions
+// Returns absolute paths to all files matching selectedExtensions using isMediaFile()
+// This function is called every time a source directory is selected or file types are changed
+// Current pain point: while scanning large directories, the UI stalls until the scan is complete
 QStringList one_step_backup::findMediaFiles(const QString& directory)
 {
     QStringList mediaFiles;
+
+    if (selectedExtensions.isEmpty()) {
+        return mediaFiles;
+    }
+
     QDirIterator it(directory, QDir::Files, QDirIterator::Subdirectories);
-    
     while (it.hasNext()) {
-        QString filePath = it.next();
+        const QString filePath = it.next();
         if (isMediaFile(filePath)) {
             mediaFiles.append(filePath);
         }
     }
-    
+
     return mediaFiles;
 }
 
+// Copies the given list of files to the destination directory
+// Returns true if all files were copied successfully, false if any error occurred
 bool one_step_backup::copyFiles(const QStringList& files, const QString& destination)
 {
     QDir destDir(destination);
@@ -122,36 +187,34 @@ bool one_step_backup::copyFiles(const QStringList& files, const QString& destina
         destDir.mkpath(".");
     }
 
-    int totalFiles = files.size();
+    const int totalFiles = files.size();
     int currentFile = 0;
 
     for (const QString& filePath : files) {
         QFileInfo fileInfo(filePath);
         QString destPath = destDir.filePath(fileInfo.fileName());
-        
-        // Handle duplicate filenames
+
         int counter = 1;
         while (QFile::exists(destPath)) {
-            QString baseName = fileInfo.baseName();
-            QString extension = fileInfo.completeSuffix();
+            const QString baseName = fileInfo.baseName();
+            const QString extension = fileInfo.completeSuffix();
             destPath = destDir.filePath(QString("%1_%2.%3").arg(baseName).arg(counter).arg(extension));
-            counter++;
+            ++counter;
         }
 
         if (!QFile::copy(filePath, destPath)) {
-            QMessageBox::warning(this, "Error", 
-                QString("Failed to copy file: %1").arg(filePath));
+            QMessageBox::warning(this, "Error", QString("Failed to copy file: %1").arg(filePath));
             return false;
         }
 
-        currentFile++;
-        updateProgress((currentFile * 100) / totalFiles, 
-            QString("Copying: %1").arg(fileInfo.fileName()));
+        ++currentFile;
+        updateProgress((currentFile * 100) / totalFiles, QString("Copying: %1").arg(fileInfo.fileName()));
     }
 
     return true;
 }
 
+// Updates the progress bar 
 void one_step_backup::updateProgress(int value, const QString& message)
 {
     progressBar->setValue(value);
@@ -160,29 +223,88 @@ void one_step_backup::updateProgress(int value, const QString& message)
     QApplication::processEvents();
 }
 
+// Does file selection again and starts the backup process
 void one_step_backup::startBackup()
 {
-    QString sourceDir = sourceDirEdit->text();
-    QString destDir = destDirEdit->text();
+    const QString sourceDir = sourceDirEdit->text();
+    const QString destDir = destDirEdit->text();
 
     if (sourceDir.isEmpty() || destDir.isEmpty()) {
         QMessageBox::warning(this, "Error", "Please select both source and destination directories.");
         return;
     }
 
+    if (selectedExtensions.isEmpty()) {
+        QMessageBox::information(this, "Information", "No file types are selected. Please choose file types before starting the backup.");
+        return;
+    }
+
     fileListWidget->clear();
     progressBar->setValue(0);
-    updateProgress(0, "Searching for media files...");
+    updateProgress(0, "Searching for matching files...");
 
-    QStringList mediaFiles = findMediaFiles(sourceDir);
+    const QStringList mediaFiles = findMediaFiles(sourceDir);
     if (mediaFiles.isEmpty()) {
-        QMessageBox::information(this, "Information", "No media files found in the source directory.");
+        QMessageBox::information(this, "Information", "No files matching the selected file types were found in the source directory.");
         return;
     }
 
     updateProgress(0, QString("Found %1 media files. Starting backup...").arg(mediaFiles.size()));
-    
+
     if (copyFiles(mediaFiles, destDir)) {
         QMessageBox::information(this, "Success", "Backup completed successfully!");
+    }
+}
+
+// Initializes the fileTypeCategories map with predefined categories and extensions
+void one_step_backup::initializeFileTypeCategories()
+{
+    fileTypeCategories = {
+        {"Photos", {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}},
+        {"Videos", {".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".webm"}},
+        {"Documents", {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"}},
+        {"Audio", {".mp3", ".wav", ".flac", ".aac", ".ogg"}},
+        {"Archives", {".zip", ".rar", ".7z", ".tar", ".gz"}}
+    };
+}
+
+// Update selectedExtensions; called when window is first created and when "Select file types" dialog is accepted
+void one_step_backup::applySelectedExtensions(const QSet<QString>& extensions)
+{
+    selectedExtensions.clear();
+    for (const QString& rawExtension : extensions) {
+        QString normalized = rawExtension.trimmed().toLower();
+        if (normalized.isEmpty()) {
+            continue;
+        }
+        if (!normalized.startsWith('.')) {
+            normalized.prepend('.');
+        }
+        selectedExtensions.insert(normalized);
+    }
+}
+
+// Refreshes the file list display based on current source directory and selected extensions
+void one_step_backup::refreshFileList()
+{
+    fileListWidget->clear();
+
+    if (selectedExtensions.isEmpty()) {
+        fileListWidget->addItem("No file types selected.");
+        return;
+    }
+
+    const QString dir = sourceDirEdit->text();
+    if (dir.isEmpty()) {
+        fileListWidget->addItem("Select a source directory to view matching files.");
+        return;
+    }
+
+    const QStringList mediaFiles = findMediaFiles(dir);
+    if (mediaFiles.isEmpty()) {
+        fileListWidget->addItem("No files matching the selected types were found.");
+    } else {
+        fileListWidget->addItem(QString("Found %1 matching files:").arg(mediaFiles.size()));
+        fileListWidget->addItems(mediaFiles);
     }
 }

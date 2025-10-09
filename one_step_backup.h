@@ -1,3 +1,6 @@
+// one_step_backup.h
+// Licensed under Apache 2.0
+
 #pragma once
 
 #include <QtWidgets/QMainWindow>
@@ -11,6 +14,9 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QListWidget>
+#include <QMap>
+#include <QSet>
+#include "file_type_selection.h"
 #include "ui_one_step_backup.h"
 
 class one_step_backup : public QMainWindow
@@ -26,6 +32,7 @@ private slots:
     void browseDestinationDirectory();
     void startBackup();
     void updateProgress(int value, const QString& message);
+    void openFileTypeSelection();
 
 private:
     Ui::one_step_backupClass ui;
@@ -33,11 +40,19 @@ private:
     QLineEdit* destDirEdit;
     QPushButton* browseSourceBtn;
     QPushButton* browseDestBtn;
+    QPushButton* selectFileTypesBtn;
     QPushButton* startBackupBtn;
     QProgressBar* progressBar;
     QListWidget* fileListWidget;
-    
+
+    QMap<QString, QStringList> fileTypeCategories;
+    QSet<QString> selectedExtensions;
+
+    void initializeFileTypeCategories();
+    void applySelectedExtensions(const QSet<QString>& extensions);
+    void refreshFileList();
+
     QStringList findMediaFiles(const QString& directory);
     bool copyFiles(const QStringList& files, const QString& destination);
-    bool isMediaFile(const QString& filePath);
+    bool isMediaFile(const QString& filePath) const;
 };

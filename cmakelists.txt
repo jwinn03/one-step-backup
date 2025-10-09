@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(one_step_backup LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+qt_standard_project_setup()
+
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+
+add_executable(one_step_backup
+    main.cpp
+    one_step_backup.cpp
+    file_type_selection.cpp
+    one_step_backup.h
+    file_type_selection.h
+    one_step_backup.ui
+)
+
+target_link_libraries(one_step_backup PRIVATE Qt6::Widgets)

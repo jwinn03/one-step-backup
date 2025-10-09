@@ -86,7 +86,9 @@
     <QtRcc Include="one_step_backup.qrc" />
     <QtUic Include="one_step_backup.ui" />
     <QtMoc Include="one_step_backup.h" />
+    <QtMoc Include="file_type_selection.h" />
     <ClCompile Include="one_step_backup.cpp" />
+    <ClCompile Include="file_type_selection.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
