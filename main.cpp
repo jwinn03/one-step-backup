@@ -4,6 +4,7 @@
 #include "one_step_backup.h"
 #include <QtWidgets/QApplication>
 #include <QDebug>
+#include <QIcon>
 
 static QtMessageHandler originalHandler = nullptr;
 
@@ -23,7 +24,10 @@ int main(int argc, char *argv[])
 {
     originalHandler = qInstallMessageHandler(messageHandler);
 
+    qDebug() << "Application started";
+
     QApplication a(argc, argv);
+    a.setWindowIcon(QIcon("B.svg"));
     one_step_backup w;
     w.show();
     return a.exec();

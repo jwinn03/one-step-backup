@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QSvgWidget>
 
 // Define a default "home" directory based on OS and Qt's implementation of standard paths
 #ifdef Q_OS_WIN
@@ -24,13 +25,17 @@ one_step_backup::one_step_backup(QWidget* parent)
     : QMainWindow(parent)
 {
     ui.setupUi(this);
-    setWindowTitle("Media File Backup Tool");
+    setWindowTitle("One Step Backup");
     
     initializeFileTypeCategories();
 
     QWidget* centralWidget = new QWidget(this);
     QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
     setCentralWidget(centralWidget);
+
+    createActions();
+    createMenus();
+    
 
     // Source directory selection
     QHBoxLayout* sourceLayout = new QHBoxLayout();
@@ -92,14 +97,56 @@ one_step_backup::one_step_backup(QWidget* parent)
             for (const QString& ext : it.value()) {
                 defaultSelection.insert(ext);
             }
+            
         }
     }
-
+    
     applySelectedExtensions(defaultSelection);
     refreshFileList();
 }
 
 one_step_backup::~one_step_backup() = default;
+
+// Display "About" dialog
+void one_step_backup::about()
+{
+    QDialog aboutDialog(this);
+    Ui::About ui;
+	ui.setupUi(&aboutDialog);
+
+    // pain
+	QSvgWidget* svgWidget = new QSvgWidget(ui.logo);
+    svgWidget->load(QString("B.svg"));
+   
+    // svgWidget->setMinimumSize(20, 20);
+    svgWidget->resize(100, 100);
+    
+    svgWidget->show();
+
+    aboutDialog.setWindowModality(Qt::WindowModality::WindowModal);
+	aboutDialog.exec();
+}
+
+void one_step_backup::aboutQt()
+{
+    QApplication::aboutQt();
+}
+// Create specific actions within top menu items
+void one_step_backup::createActions()
+{
+    aboutAct = new QAction(tr("&About One Step Backup"), this);
+    connect(aboutAct, &QAction::triggered, this, &one_step_backup::about);
+    aboutQtAct = new QAction(tr("About &Qt"), this);
+    connect(aboutQtAct, &QAction::triggered, this, &one_step_backup::aboutQt);
+}
+
+// Create top menu items
+void one_step_backup::createMenus()
+{
+    helpMenu = menuBar()->addMenu(tr("&Help"));
+    helpMenu->addAction(aboutAct);
+    helpMenu->addAction(aboutQtAct);
+}
 
 // Opens OS native dialog to select source directory
 void one_step_backup::browseSourceDirectory()

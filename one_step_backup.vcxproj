@@ -32,7 +32,7 @@
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
     <QtInstall>6.9.0</QtInstall>
-    <QtModules>core;gui;widgets</QtModules>
+    <QtModules>core;gui;widgets;svgwidgets</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
@@ -84,12 +84,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <QtRcc Include="one_step_backup.qrc" />
+    <QtUic Include="about.ui" />
     <QtUic Include="one_step_backup.ui" />
     <QtMoc Include="one_step_backup.h" />
     <QtMoc Include="file_type_selection.h" />
     <ClCompile Include="one_step_backup.cpp" />
     <ClCompile Include="file_type_selection.cpp" />
     <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="one_step_backup.pro" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

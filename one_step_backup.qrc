@@ -1,4 +1,5 @@
 <RCC>
-    <qresource prefix="one_step_backup">
+    <qresource prefix="/one_step_backup">
+        <file>B.svg</file>
     </qresource>
 </RCC>

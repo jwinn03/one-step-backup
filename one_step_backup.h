@@ -18,6 +18,7 @@
 #include <QSet>
 #include "file_type_selection.h"
 #include "ui_one_step_backup.h"
+#include "ui_about.h"
 
 class one_step_backup : public QMainWindow
 {
@@ -28,6 +29,11 @@ public:
     ~one_step_backup();
 
 private slots:
+    // Top menu
+    void about();
+    void aboutQt();
+
+    // Main UI
     void browseSourceDirectory();
     void browseDestinationDirectory();
     void startBackup();
@@ -35,6 +41,16 @@ private slots:
     void openFileTypeSelection();
 
 private:
+    // Top menu
+    void createActions();
+    void createMenus();
+
+    QMenu* helpMenu;
+    QAction* aboutAct;
+    QAction* aboutQtAct;
+    Ui::About aboutDialog;
+
+    // Main UI
     Ui::one_step_backupClass ui;
     QLineEdit* sourceDirEdit;
     QLineEdit* destDirEdit;
