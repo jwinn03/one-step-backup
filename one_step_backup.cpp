@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QStorageInfo>
 #include <QSvgWidget>
 
 // Define a default "home" directory based on OS and Qt's implementation of standard paths
@@ -56,6 +57,35 @@ one_step_backup::one_step_backup(QWidget* parent)
     destLayout->addWidget(destDirEdit);
     destLayout->addWidget(browseDestBtn);
     mainLayout->addLayout(destLayout);
+    /*
+	// Automatically fill in source directory as home directory; this may pick up thousands of files, slowing the UI, so it is suggested to be left commented out
+    if (!DEFAULT_DIRECTORY.isEmpty()) {
+        sourceDirEdit->setText(DEFAULT_DIRECTORY);
+    }
+    */
+    
+    // Automatically fill in destination directory as an external drive if available
+    const QList<QStorageInfo> drives = QStorageInfo::mountedVolumes();
+    QString defaultDestPath;
+    for (const QStorageInfo &drive : drives) {
+        // On Windows, check for drives other than C: that are ready and not read-only
+        // On macOS and Linux, check for drives other than root that are ready and not read-only
+        #ifdef Q_OS_WIN
+        if (drive.isReady() && !drive.isReadOnly() && drive.rootPath().compare("C:/", Qt::CaseInsensitive) != 0) {
+            defaultDestPath = drive.rootPath();
+            break; 
+        }
+        #elif defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+        if (drive.isReady() && !drive.isReadOnly() && drive.rootPath() != "/") {
+            defaultDestPath = drive.rootPath();
+            break; 
+        }
+        #endif 
+        
+    }
+    if (!defaultDestPath.isEmpty()) {
+        destDirEdit->setText(defaultDestPath);
+    }
 
     // File type selection
     selectFileTypesBtn = new QPushButton("Select file types", this);

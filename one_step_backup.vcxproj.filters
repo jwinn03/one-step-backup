@@ -57,4 +57,19 @@
   <ItemGroup>
     <None Include="one_step_backup.pro" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="app_icon.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="B.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>
